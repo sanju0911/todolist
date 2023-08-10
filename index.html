@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODO List Generator</title>
+    <style>
+        
+.todo-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.input-container {
+    margin-bottom: 20px;
+}
+
+#todoName, #todoDescription {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 5px;
+}
+
+#addButton {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+#addButton:hover {
+    background-color: #45a049;
+}
+
+    </style>
+</head>
+<body>
+    <div class="todo-container">
+        <h1>TODO List Generator</h1>
+        <div class="input-container">
+            <input type="text" id="todoName" placeholder="Todo Name">
+            <textarea id="todoDescription" placeholder="Description (Minimum 3 words)"></textarea>
+            <button id="addButton">Add to List</button>
+        </div>
+        <ul id="todoList"></ul>
+    </div>
+    <div class="completed-container">
+        <h2>Completed Todos</h2>
+        <ul id="completedList"></ul>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const addButton = document.getElementById("addButton");
+    const todoNameInput = document.getElementById("todoName");
+    const todoDescriptionInput = document.getElementById("todoDescription");
+    const todoList = document.getElementById("todoList");
+    const completedList = document.getElementById("completedList");
+    const apiUrl = 'https://crudcrud.com/api/6509154d56f644aa94d3c44088097c70';
+
+
+    function fetchTodos() {
+        axios.get(`${apiUrl}/todos`)
+            .then(response => {
+                const todos = response.data;
+                todos.forEach(todo => {
+                    createTodoItem(todo._id, todo.name, todo.description);
+                });
+            })
+            .catch(error => {
+                console.error("Error fetching todos:", error);
+            });
+    }
+
+
+    function addTodoItem(name, description) {
+        axios.post(`${apiUrl}/todos`, {
+            name: name,
+            description: description
+        })
+            .then(response => {
+                createTodoItem(response.data._id, name, description);
+            })
+            .catch(error => {
+                console.error("Error adding todo:", error);
+            });
+    }
+
+
+    function deleteTodoItem(id, listItem) {
+        axios.delete(`${apiUrl}/todos/${id}`)
+            .then(() => {
+                if (listItem.parentElement === todoList) {
+                    todoList.removeChild(listItem);
+                } else if (listItem.parentElement === completedList) {
+                    completedList.removeChild(listItem);
+                }
+            })
+            .catch(error => {
+                console.error("Error deleting todo:", error);
+            });
+    }
+
+    addButton.addEventListener("click", () => {
+        const todoName = todoNameInput.value.trim();
+        const todoDescription = todoDescriptionInput.value.trim();
+
+        if (todoName && todoDescription.split(" ").length >= 3) {
+            addTodoItem(todoName, todoDescription);
+            todoNameInput.value = "";
+            todoDescriptionInput.value = "";
+        } else {
+            alert("Please enter a valid Todo Name and Description (at least three words for description).");
+        }
+    });
+
+    function createTodoItem(id, name, description) {
+        const li = document.createElement("li");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        const text = document.createElement("span");
+        text.textContent = `${name}: ${description}`;
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.addEventListener("click", () => {
+            deleteTodoItem(id, li);
+        });
+
+
+        checkbox.addEventListener("change", () => {
+            if (checkbox.checked) {
+                moveTodoToCompleted(id, li);
+            }
+        });
+
+        li.appendChild(checkbox);
+        li.appendChild(text);
+        li.appendChild(deleteButton);
+        todoList.appendChild(li);
+    }
+
+
+    function moveTodoToCompleted(id, listItem) {
+        axios.get(`${apiUrl}/todos/${id}`)
+            .then(response => {
+                const todo = response.data;
+                const completedListItem = document.createElement("li");
+                completedListItem.textContent = `${todo.name}: ${todo.description}`;
+                completedList.appendChild(completedListItem);
+                deleteTodoItem(id, listItem);
+            })
+            .catch(error => {
+                console.error("Error moving todo to completed:", error);
+            });
+    }
+
+
+    fetchTodos();
+
+</script>
+    </body>
+    
+    </html>
